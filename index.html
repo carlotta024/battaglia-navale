@@ -7,6 +7,7 @@
 <title>Battaglia Navale</title>
 
 <style>
+
     *{
         box-sizing:border-box;
         font-family:Arial, sans-serif;
@@ -64,10 +65,12 @@
         background:#475569;
     }
 
+    /* Nave colpita */
     .hit{
         background:#ef4444 !important;
     }
 
+    /* Acqua */
     .miss{
         background:#38bdf8 !important;
     }
@@ -92,19 +95,26 @@
     button:hover{
         background:#16a34a;
     }
+
 </style>
 </head>
 
 <body>
 
 <h1>⚓ Battaglia Navale</h1>
+
 <p>Trova e distruggi tutte le navi nemiche!</p>
 
 <div class="game-container">
+
     <div class="board-wrapper">
+
         <h2>Campo Nemico</h2>
+
         <div id="enemy-board" class="board"></div>
+
     </div>
+
 </div>
 
 <div id="message">Inizia la partita!</div>
@@ -112,45 +122,52 @@
 <button onclick="restartGame()">Nuova Partita</button>
 
 <script>
-    // =========================
+
+    // ======================================
     // CONFIGURAZIONE
-    // =========================
+    // ======================================
 
     const BOARD_SIZE = 10;
 
-    // Dimensioni navi
+    // Dimensioni delle navi
     const SHIPS = [5,4,3,3,2];
 
-    // =========================
+    // ======================================
     // VARIABILI GIOCO
-    // =========================
+    // ======================================
 
     let enemyBoard = [];
+
     let enemyShips = 0;
+
     let gameOver = false;
 
-    // =========================
+    // ======================================
     // SUONI
-    // =========================
+    // ======================================
 
-    // Suono quando il colpo finisce in acqua
+    // Suono acqua
     const waterSound = new Audio("assets/inacqua.wav");
 
-    // =========================
-    // CREA GRIGLIA
-    // =========================
+    // Suono colpo nave
+    const hitSound = new Audio("assets/colpirebarca.wav");
 
-    function createBoard() {
+    // ======================================
+    // CREA TABELLONE
+    // ======================================
+
+    function createBoard(){
+
         return Array.from({ length: BOARD_SIZE }, () =>
             Array(BOARD_SIZE).fill(0)
         );
     }
 
-    // =========================
-    // POSIZIONA NAVI
-    // =========================
+    // ======================================
+    // POSIZIONA NAVI CASUALI
+    // ======================================
 
-    function placeShips(board) {
+    function placeShips(board){
 
         SHIPS.forEach(size => {
 
@@ -161,13 +178,16 @@
                 const horizontal = Math.random() < 0.5;
 
                 const row = Math.floor(Math.random() * BOARD_SIZE);
+
                 const col = Math.floor(Math.random() * BOARD_SIZE);
 
                 let fits = true;
 
+                // Controllo spazio disponibile
                 for(let i = 0; i < size; i++){
 
                     const r = row + (horizontal ? 0 : i);
+
                     const c = col + (horizontal ? i : 0);
 
                     if(
@@ -180,11 +200,13 @@
                     }
                 }
 
+                // Posizionamento nave
                 if(fits){
 
                     for(let i = 0; i < size; i++){
 
                         const r = row + (horizontal ? 0 : i);
+
                         const c = col + (horizontal ? i : 0);
 
                         board[r][c] = 1;
@@ -198,9 +220,9 @@
         });
     }
 
-    // =========================
+    // ======================================
     // DISEGNA TABELLONE
-    // =========================
+    // ======================================
 
     function renderBoard(){
 
@@ -226,25 +248,29 @@
                     div.classList.add("miss");
                 }
 
-                // Click sulla cella
+                // Evento click
                 div.addEventListener("click", () => attack(r, c));
 
                 boardElement.appendChild(div);
+
             });
+
         });
+
     }
 
-    // =========================
+    // ======================================
     // ATTACCO
-    // =========================
+    // ======================================
 
     function attack(r, c){
 
+        // Se partita terminata
         if(gameOver) return;
 
         const cell = enemyBoard[r][c];
 
-        // Casella già cliccata
+        // Casella già colpita
         if(cell === 2 || cell === 3){
 
             setMessage("Hai già colpito questa casella!");
@@ -252,27 +278,40 @@
             return;
         }
 
-        // COLPITO
+        // ======================================
+        // NAVE COLPITA
+        // ======================================
+
         if(cell === 1){
 
             enemyBoard[r][c] = 2;
 
             enemyShips--;
 
-            setMessage("💥 Colpito!");
+            // Riproduce suono colpo nave
+            hitSound.currentTime = 0;
+
+            hitSound.play().catch(error => {
+                console.log("Errore audio hit:", error);
+            });
+
+            setMessage("💥 Nave colpita!");
 
             // Vittoria
             if(enemyShips === 0){
 
-                setMessage("🏆 Hai vinto!");
+                setMessage("🏆 Hai distrutto tutte le navi!");
 
                 gameOver = true;
             }
 
-        } 
-        
+        }
+
+        // ======================================
         // ACQUA
-        else {
+        // ======================================
+
+        else{
 
             enemyBoard[r][c] = 3;
 
@@ -280,27 +319,28 @@
             waterSound.currentTime = 0;
 
             waterSound.play().catch(error => {
-                console.log("Errore audio:", error);
+                console.log("Errore audio acqua:", error);
             });
 
             setMessage("🌊 Acqua!");
+
         }
 
         renderBoard();
     }
 
-    // =========================
+    // ======================================
     // MESSAGGI
-    // =========================
+    // ======================================
 
     function setMessage(text){
 
         document.getElementById("message").innerText = text;
     }
 
-    // =========================
-    // RESET PARTITA
-    // =========================
+    // ======================================
+    // NUOVA PARTITA
+    // ======================================
 
     function restartGame(){
 
@@ -317,9 +357,9 @@
         setMessage("Nuova partita iniziata!");
     }
 
-    // =========================
+    // ======================================
     // AVVIO GIOCO
-    // =========================
+    // ======================================
 
     restartGame();
 
