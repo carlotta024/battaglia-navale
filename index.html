@@ -1,275 +1,368 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pac-Man HTML Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      margin: 0;
-      background: black;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-family: Arial, sans-serif;
-      color: white;
+<title>Battaglia Navale</title>
+
+<style>
+
+    *{
+        box-sizing:border-box;
+        font-family:Arial, sans-serif;
     }
 
-    h1 {
-      margin: 20px 0 10px;
-      color: yellow;
+    body{
+        margin:0;
+        background:#0f172a;
+        color:white;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        min-height:100vh;
+        padding:20px;
     }
 
-    canvas {
-      border: 4px solid blue;
-      background: black;
+    h1{
+        margin-bottom:10px;
     }
 
-    #info {
-      margin-top: 10px;
-      font-size: 20px;
+    p{
+        margin-top:0;
     }
 
-    #controls {
-      margin-top: 10px;
-      color: #ccc;
+    .game-container{
+        display:flex;
+        justify-content:center;
+        margin-top:20px;
     }
-  </style>
+
+    .board-wrapper{
+        text-align:center;
+    }
+
+    .board{
+        display:grid;
+        grid-template-columns:repeat(10, 40px);
+        grid-template-rows:repeat(10, 40px);
+        gap:2px;
+        background:#1e293b;
+        padding:5px;
+        border-radius:10px;
+    }
+
+    .cell{
+        width:40px;
+        height:40px;
+        background:#334155;
+        border-radius:4px;
+        cursor:pointer;
+        transition:0.2s;
+    }
+
+    .cell:hover{
+        background:#475569;
+    }
+
+    /* Nave colpita */
+    .hit{
+        background:#ef4444 !important;
+    }
+
+    /* Acqua */
+    .miss{
+        background:#38bdf8 !important;
+    }
+
+    #message{
+        margin-top:20px;
+        font-size:20px;
+        font-weight:bold;
+    }
+
+    button{
+        margin-top:20px;
+        padding:10px 20px;
+        border:none;
+        border-radius:8px;
+        background:#22c55e;
+        color:white;
+        font-size:16px;
+        cursor:pointer;
+    }
+
+    button:hover{
+        background:#16a34a;
+    }
+
+</style>
 </head>
+
 <body>
 
-<h1>PAC-MAN</h1>
+<h1>⚓ Battaglia Navale</h1>
 
-<canvas id="game" width="420" height="420"></canvas>
+<p>Trova e distruggi tutte le navi nemiche!</p>
 
-<div id="info">
-  Punteggio: <span id="score">0</span>
+<div class="game-container">
+
+    <div class="board-wrapper">
+
+        <h2>Campo Nemico</h2>
+
+        <div id="enemy-board" class="board"></div>
+
+    </div>
+
 </div>
 
-<div id="controls">
-  Usa le frecce della tastiera per muoverti
-</div>
+<div id="message">Inizia la partita!</div>
+
+<button onclick="restartGame()">Nuova Partita</button>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
 
-const tileSize = 20;
-const rows = 21;
-const cols = 21;
+    // ======================================
+    // CONFIGURAZIONE
+    // ======================================
 
-let score = 0;
+    const BOARD_SIZE = 10;
 
-const map = [
-  "#####################",
-  "#.........#.........#",
-  "#.###.###.#.###.###.#",
-  "#o###.###.#.###.###o#",
-  "#...................#",
-  "#.###.#.#####.#.###.#",
-  "#.....#...#...#.....#",
-  "#####.### # ###.#####",
-  "    #.#       #.#    ",
-  "#####.# ##-## #.#####",
-  "     .  #GGG#  .     ",
-  "#####.# ##### #.#####",
-  "    #.#       #.#    ",
-  "#####.# ##### #.#####",
-  "#.........#.........#",
-  "#.###.###.#.###.###.#",
-  "#o..#...........#..o#",
-  "###.#.#.#####.#.#.###",
-  "#.....#...#...#.....#",
-  "#.######### #########",
-  "#####################"
-];
+    // Dimensioni delle navi
+    const SHIPS = [5,4,3,3,2];
 
-const pacman = {
-  x: 1,
-  y: 1,
-  dx: 0,
-  dy: 0,
-  radius: tileSize / 2 - 2
-};
+    // ======================================
+    // VARIABILI GIOCO
+    // ======================================
 
-const ghosts = [
-  { x: 10, y: 10, color: "red", dx: 1, dy: 0 },
-  { x: 9, y: 10, color: "pink", dx: -1, dy: 0 }
-];
+    let enemyBoard = [];
 
-function drawMap() {
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const tile = map[row][col];
+    let enemyShips = 0;
 
-      if (tile === "#") {
-        ctx.fillStyle = "blue";
-        ctx.fillRect(
-          col * tileSize,
-          row * tileSize,
-          tileSize,
-          tileSize
+    let gameOver = false;
+
+    // ======================================
+    // SUONI
+    // ======================================
+
+    // Suono acqua
+    const waterSound = new Audio("assets/inacqua.wav");
+
+    // Suono colpo nave
+    const hitSound = new Audio("assets/colpirebarca.wav");
+
+    // ======================================
+    // CREA TABELLONE
+    // ======================================
+
+    function createBoard(){
+
+        return Array.from({ length: BOARD_SIZE }, () =>
+            Array(BOARD_SIZE).fill(0)
         );
-      }
-
-      if (tile === ".") {
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(
-          col * tileSize + tileSize / 2,
-          row * tileSize + tileSize / 2,
-          3,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-      }
-
-      if (tile === "o") {
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(
-          col * tileSize + tileSize / 2,
-          row * tileSize + tileSize / 2,
-          6,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-      }
     }
-  }
-}
 
-function drawPacman() {
-  ctx.fillStyle = "yellow";
-  ctx.beginPath();
-  ctx.arc(
-    pacman.x * tileSize + tileSize / 2,
-    pacman.y * tileSize + tileSize / 2,
-    pacman.radius,
-    0.2 * Math.PI,
-    1.8 * Math.PI
-  );
-  ctx.lineTo(
-    pacman.x * tileSize + tileSize / 2,
-    pacman.y * tileSize + tileSize / 2
-  );
-  ctx.fill();
-}
+    // ======================================
+    // POSIZIONA NAVI CASUALI
+    // ======================================
 
-function drawGhosts() {
-  ghosts.forEach(g => {
-    ctx.fillStyle = g.color;
-    ctx.beginPath();
-    ctx.arc(
-      g.x * tileSize + tileSize / 2,
-      g.y * tileSize + tileSize / 2,
-      tileSize / 2 - 2,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-  });
-}
+    function placeShips(board){
 
-function canMove(x, y) {
-  return map[y][x] !== "#";
-}
+        SHIPS.forEach(size => {
 
-function movePacman() {
-  const newX = pacman.x + pacman.dx;
-  const newY = pacman.y + pacman.dy;
+            let placed = false;
 
-  if (canMove(newX, newY)) {
-    pacman.x = newX;
-    pacman.y = newY;
-  }
+            while(!placed){
 
-  let row = map[pacman.y];
-  if (row[pacman.x] === ".") {
-    map[pacman.y] =
-      row.substring(0, pacman.x) +
-      " " +
-      row.substring(pacman.x + 1);
+                const horizontal = Math.random() < 0.5;
 
-    score += 10;
-    document.getElementById("score").innerText = score;
-  }
-}
+                const row = Math.floor(Math.random() * BOARD_SIZE);
 
-function moveGhosts() {
-  ghosts.forEach(g => {
-    const directions = [
-      { dx: 1, dy: 0 },
-      { dx: -1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: 0, dy: -1 }
-    ];
+                const col = Math.floor(Math.random() * BOARD_SIZE);
 
-    const possible = directions.filter(d =>
-      canMove(g.x + d.dx, g.y + d.dy)
-    );
+                let fits = true;
 
-    const dir = possible[Math.floor(Math.random() * possible.length)];
+                // Controllo spazio disponibile
+                for(let i = 0; i < size; i++){
 
-    g.dx = dir.dx;
-    g.dy = dir.dy;
+                    const r = row + (horizontal ? 0 : i);
 
-    g.x += g.dx;
-    g.y += g.dy;
-  });
-}
+                    const c = col + (horizontal ? i : 0);
 
-function checkCollision() {
-  ghosts.forEach(g => {
-    if (g.x === pacman.x && g.y === pacman.y) {
-      alert("Game Over!");
-      location.reload();
+                    if(
+                        r >= BOARD_SIZE ||
+                        c >= BOARD_SIZE ||
+                        board[r][c] !== 0
+                    ){
+                        fits = false;
+                        break;
+                    }
+                }
+
+                // Posizionamento nave
+                if(fits){
+
+                    for(let i = 0; i < size; i++){
+
+                        const r = row + (horizontal ? 0 : i);
+
+                        const c = col + (horizontal ? i : 0);
+
+                        board[r][c] = 1;
+
+                        enemyShips++;
+                    }
+
+                    placed = true;
+                }
+            }
+        });
     }
-  });
-}
 
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ======================================
+    // DISEGNA TABELLONE
+    // ======================================
 
-  drawMap();
-  movePacman();
-  moveGhosts();
-  checkCollision();
+    function renderBoard(){
 
-  drawPacman();
-  drawGhosts();
+        const boardElement = document.getElementById("enemy-board");
 
-  requestAnimationFrame(gameLoop);
-}
+        boardElement.innerHTML = "";
 
-document.addEventListener("keydown", e => {
-  switch (e.key) {
-    case "ArrowUp":
-      pacman.dx = 0;
-      pacman.dy = -1;
-      break;
+        enemyBoard.forEach((row, r) => {
 
-    case "ArrowDown":
-      pacman.dx = 0;
-      pacman.dy = 1;
-      break;
+            row.forEach((cell, c) => {
 
-    case "ArrowLeft":
-      pacman.dx = -1;
-      pacman.dy = 0;
-      break;
+                const div = document.createElement("div");
 
-    case "ArrowRight":
-      pacman.dx = 1;
-      pacman.dy = 0;
-      break;
-  }
-});
+                div.classList.add("cell");
 
-gameLoop();
+                // Nave colpita
+                if(cell === 2){
+                    div.classList.add("hit");
+                }
+
+                // Acqua
+                if(cell === 3){
+                    div.classList.add("miss");
+                }
+
+                // Evento click
+                div.addEventListener("click", () => attack(r, c));
+
+                boardElement.appendChild(div);
+
+            });
+
+        });
+
+    }
+
+    // ======================================
+    // ATTACCO
+    // ======================================
+
+    function attack(r, c){
+
+        // Se partita terminata
+        if(gameOver) return;
+
+        const cell = enemyBoard[r][c];
+
+        // Casella già colpita
+        if(cell === 2 || cell === 3){
+
+            setMessage("Hai già colpito questa casella!");
+
+            return;
+        }
+
+        // ======================================
+        // NAVE COLPITA
+        // ======================================
+
+        if(cell === 1){
+
+            enemyBoard[r][c] = 2;
+
+            enemyShips--;
+
+            // Riproduce suono colpo nave
+            hitSound.currentTime = 0;
+
+            hitSound.play().catch(error => {
+                console.log("Errore audio hit:", error);
+            });
+
+            setMessage("💥 Nave colpita!");
+
+            // Vittoria
+            if(enemyShips === 0){
+
+                setMessage("🏆 Hai distrutto tutte le navi!");
+
+                gameOver = true;
+            }
+
+        }
+
+        // ======================================
+        // ACQUA
+        // ======================================
+
+        else{
+
+            enemyBoard[r][c] = 3;
+
+            // Riproduce suono acqua
+            waterSound.currentTime = 0;
+
+            waterSound.play().catch(error => {
+                console.log("Errore audio acqua:", error);
+            });
+
+            setMessage("🌊 Acqua!");
+
+        }
+
+        renderBoard();
+    }
+
+    // ======================================
+    // MESSAGGI
+    // ======================================
+
+    function setMessage(text){
+
+        document.getElementById("message").innerText = text;
+    }
+
+    // ======================================
+    // NUOVA PARTITA
+    // ======================================
+
+    function restartGame(){
+
+        enemyBoard = createBoard();
+
+        enemyShips = 0;
+
+        gameOver = false;
+
+        placeShips(enemyBoard);
+
+        renderBoard();
+
+        setMessage("Nuova partita iniziata!");
+    }
+
+    // ======================================
+    // AVVIO GIOCO
+    // ======================================
+
+    restartGame();
+
 </script>
 
 </body>
