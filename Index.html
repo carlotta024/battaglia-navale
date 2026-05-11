@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Battaglia Navale</title>
+
+<style>
+    *{
+        box-sizing:border-box;
+        font-family:Arial, sans-serif;
+    }
+
+    body{
+        margin:0;
+        background:#0f172a;
+        color:white;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        min-height:100vh;
+        padding:20px;
+    }
+
+    h1{
+        margin-bottom:10px;
+    }
+
+    .game-container{
+        display:flex;
+        gap:40px;
+        flex-wrap:wrap;
+        justify-content:center;
+        margin-top:20px;
+    }
+
+    .board-wrapper{
+        text-align:center;
+    }
+
+    .board{
+        display:grid;
+        grid-template-columns:repeat(10, 40px);
+        grid-template-rows:repeat(10, 40px);
+        gap:2px;
+        background:#1e293b;
+        padding:5px;
+        border-radius:10px;
+    }
+
+    .cell{
+        width:40px;
+        height:40px;
+        background:#334155;
+        border-radius:4px;
+        cursor:pointer;
+        transition:0.2s;
+    }
+
+    .cell:hover{
+        background:#475569;
+    }
+
+    .ship{
+        background:#64748b;
+    }
+
+    .hit{
+        background:#ef4444 !important;
+    }
+
+    .miss{
+        background:#38bdf8 !important;
+    }
+
+    #message{
+        margin-top:20px;
+        font-size:20px;
+        font-weight:bold;
+    }
+
+    button{
+        margin-top:20px;
+        padding:10px 20px;
+        border:none;
+        border-radius:8px;
+        background:#22c55e;
+        color:white;
+        font-size:16px;
+        cursor:pointer;
+    }
+
+    button:hover{
+        background:#16a34a;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>⚓ Battaglia Navale</h1>
+<p>Colpisci tutte le navi nemiche!</p>
+
+<div class="game-container">
+
+    <div class="board-wrapper">
+        <h2>Nemico</h2>
+        <div id="enemy-board" class="board"></div>
+    </div>
+
+</div>
+
+<div id="message">Inizia la partita!</div>
+
+<button onclick="restartGame()">Nuova Partita</button>
+
+<script>
+const BOARD_SIZE = 10;
+const SHIPS = [5,4,3,3,2];
+
+let enemyBoard = [];
+let enemyShips = 0;
+let gameOver = false;
+
+function createBoard() {
+    return Array.from({length: BOARD_SIZE}, () =>
+        Array(BOARD_SIZE).fill(0)
+    );
+}
+
+function placeShips(board) {
+    SHIPS.forEach(size => {
+        let placed = false;
+
+        while(!placed){
+            const horizontal = Math.random() < 0.5;
+            const row = Math.floor(Math.random() * BOARD_SIZE);
+            const col = Math.floor(Math.random() * BOARD_SIZE);
+
+            let fits = true;
+
+            for(let i=0; i<size; i++){
+                const r = row + (horizontal ? 0 : i);
+                const c = col + (horizontal ? i : 0);
+
+                if(r >= BOARD_SIZE || c >= BOARD_SIZE || board[r][c] !== 0){
+                    fits = false;
+                    break;
+                }
+            }
+
+            if(fits){
+                for(let i=0; i<size; i++){
+                    const r = row + (horizontal ? 0 : i);
+                    const c = col + (horizontal ? i : 0);
+
+                    board[r][c] = 1;
+                    enemyShips++;
+                }
+                placed = true;
+            }
+        }
+    });
+}
+
+function renderBoard() {
+    const boardElement = document.getElementById("enemy-board");
+    boardElement.innerHTML = "";
+
+    enemyBoard.forEach((row, r) => {
+        row.forEach((cell, c) => {
+
+            const div = document.createElement("div");
+            div.classList.add("cell");
+
+            if(cell === 2) div.classList.add("hit");
+            if(cell === 3) div.classList.add("miss");
+
+            div.addEventListener("click", () => attack(r, c));
+
+            boardElement.appendChild(div);
+        });
+    });
+}
+
+function attack(r, c){
+    if(gameOver) return;
+
+    const cell = enemyBoard[r][c];
+
+    if(cell === 2 || cell === 3){
+        setMessage("Hai già colpito questa casella!");
+        return;
+    }
+
+    if(cell === 1){
+        enemyBoard[r][c] = 2;
+        enemyShips--;
+        setMessage("💥 Colpito!");
+
+        if(enemyShips === 0){
+            setMessage("🏆 Hai vinto!");
+            gameOver = true;
+        }
+
+    } else {
+        enemyBoard[r][c] = 3;
+        setMessage("🌊 Acqua!");
+    }
+
+    renderBoard();
+}
+
+function setMessage(text){
+    document.getElementById("message").innerText = text;
+}
+
+function restartGame(){
+    enemyBoard = createBoard();
+    enemyShips = 0;
+    gameOver = false;
+
+    placeShips(enemyBoard);
+    renderBoard();
+
+    setMessage("Nuova partita iniziata!");
+}
+
+restartGame();
+</script>
+
+</body>
+</html>
