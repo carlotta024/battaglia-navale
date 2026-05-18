@@ -24,23 +24,8 @@
         padding:20px;
     }
 
-    h1{
-        margin-bottom:10px;
-    }
-
-    p{
-        margin-top:0;
-    }
-
-    .game-container{
-        display:flex;
-        justify-content:center;
-        margin-top:20px;
-    }
-
-    .board-wrapper{
-        text-align:center;
-    }
+    h1{ margin-bottom:10px; }
+    p{ margin-top:0; }
 
     .board{
         display:grid;
@@ -58,26 +43,10 @@
         background:#334155;
         border-radius:4px;
         cursor:pointer;
-        transition:0.2s;
     }
 
-    .cell:hover{
-        background:#475569;
-    }
-
-    .hit{
-        background:#ef4444 !important;
-    }
-
-    .miss{
-        background:#38bdf8 !important;
-    }
-
-    #message{
-        margin-top:20px;
-        font-size:20px;
-        font-weight:bold;
-    }
+    .hit{ background:#ef4444 !important; }
+    .miss{ background:#38bdf8 !important; }
 
     button{
         margin-top:20px;
@@ -100,102 +69,108 @@
 <body>
 
 <h1>⚓ Battaglia Navale</h1>
+<p>Trova e distruggi tutte le navi!</p>
 
-<p>Trova e distruggi tutte le navi nemiche!</p>
+<div id="enemy-board" class="board"></div>
 
-<div class="game-container">
+<div id="message">Premi per iniziare</div>
 
-    <div class="board-wrapper">
-
-        <h2>Campo Nemico</h2>
-
-        <div id="enemy-board" class="board"></div>
-
-    </div>
-
-</div>
-
-<div id="message">Inizia la partita!</div>
-
-<button onclick="restartGame()">Nuova Partita</button>
+<button onclick="startGame()">Nuova Partita</button>
 
 <script>
 
-const BOARD_SIZE = 10;
+// ======================
+// CONFIG
+// ======================
+const SIZE = 10;
 const SHIPS = [5,4,3,3,2];
 
-let enemyBoard = [];
-let enemyShips = 0;
+let board = [];
+let shipsLeft = 0;
 let gameOver = false;
 
-// ======================================
-// SUONI (FIX VOLUME)
-// ======================================
+// ======================
+// AUDIO (FIX DEFINITIVO)
+// ======================
 
-const waterSound = new Audio("assets/inacqua.wav");
-const hitSound = new Audio("assets/colpirebarca.wav");
-const backgroundMusic = new Audio("assets/musicasottofondo.wav");
+// IMPORTANTISSIMO: solo dopo click utente
+const music = new Audio("assets/musicasottofondo.wav");
+const hit = new Audio("assets/colpirebarca.wav");
+const water = new Audio("assets/inacqua.wav");
 
-// 🔊 VOLUMI MIGLIORATI
-backgroundMusic.loop = true;
-backgroundMusic.volume = 1.0; // MUSICA PIÙ ALTA
+// volume alto
+music.volume = 1.0;
+music.loop = true;
 
-waterSound.volume = 1.0;
-hitSound.volume = 1.0;
+hit.volume = 1.0;
+water.volume = 1.0;
 
-// 🔊 abbassa leggermente la musica durante gli effetti
-function lowerMusicVolume(){
+let musicStarted = false;
 
-    backgroundMusic.volume = 0.7;
+// ======================
+// AVVIO MUSICA (NO BLOCCO)
+// ======================
+function startMusic(){
+    if(!musicStarted){
+        music.play().then(() => {
+            musicStarted = true;
+        }).catch(err => {
+            console.log("Musica bloccata:", err);
+        });
+    }
+}
+
+// ======================
+// LEGGERO ABBASSAMENTO
+// ======================
+function lowerMusic(){
+
+    music.volume = 0.6;
 
     setTimeout(() => {
         if(!gameOver){
-            backgroundMusic.volume = 1.0;
+            music.volume = 1.0;
         }
-    }, 1000);
+    }, 800);
 }
 
-// ======================================
-// RESTO DEL GIOCO (UGUALE AL TUO)
-// ======================================
-
+// ======================
+// BOARD
+// ======================
 function createBoard(){
-    return Array.from({ length: BOARD_SIZE }, () =>
-        Array(BOARD_SIZE).fill(0)
-    );
+    return Array.from({length: SIZE}, () => Array(SIZE).fill(0));
 }
 
-function placeShips(board){
+function placeShips(){
+
     SHIPS.forEach(size => {
+
         let placed = false;
 
         while(!placed){
+
             const horizontal = Math.random() < 0.5;
-            const row = Math.floor(Math.random() * BOARD_SIZE);
-            const col = Math.floor(Math.random() * BOARD_SIZE);
+            const r = Math.floor(Math.random() * SIZE);
+            const c = Math.floor(Math.random() * SIZE);
 
-            let fits = true;
+            let ok = true;
 
-            for(let i = 0; i < size; i++){
-                const r = row + (horizontal ? 0 : i);
-                const c = col + (horizontal ? i : 0);
+            for(let i=0;i<size;i++){
+                const rr = r + (horizontal ? 0 : i);
+                const cc = c + (horizontal ? i : 0);
 
-                if(
-                    r >= BOARD_SIZE ||
-                    c >= BOARD_SIZE ||
-                    board[r][c] !== 0
-                ){
-                    fits = false;
+                if(rr >= SIZE || cc >= SIZE || board[rr][cc] !== 0){
+                    ok = false;
                     break;
                 }
             }
 
-            if(fits){
-                for(let i = 0; i < size; i++){
-                    const r = row + (horizontal ? 0 : i);
-                    const c = col + (horizontal ? i : 0);
-                    board[r][c] = 1;
-                    enemyShips++;
+            if(ok){
+                for(let i=0;i<size;i++){
+                    const rr = r + (horizontal ? 0 : i);
+                    const cc = c + (horizontal ? i : 0);
+                    board[rr][cc] = 1;
+                    shipsLeft++;
                 }
                 placed = true;
             }
@@ -203,91 +178,100 @@ function placeShips(board){
     });
 }
 
-function renderBoard(){
-    const boardElement = document.getElementById("enemy-board");
-    boardElement.innerHTML = "";
+// ======================
+// RENDER
+// ======================
+function render(){
 
-    enemyBoard.forEach((row, r) => {
-        row.forEach((cell, c) => {
+    const el = document.getElementById("enemy-board");
+    el.innerHTML = "";
+
+    board.forEach((row,r)=>{
+        row.forEach((cell,c)=>{
 
             const div = document.createElement("div");
-            div.classList.add("cell");
+            div.className = "cell";
 
             if(cell === 2) div.classList.add("hit");
             if(cell === 3) div.classList.add("miss");
 
-            div.addEventListener("click", () => attack(r, c));
+            div.onclick = () => attack(r,c);
 
-            boardElement.appendChild(div);
+            el.appendChild(div);
         });
     });
 }
 
-function attack(r, c){
+// ======================
+// ATTACCO
+// ======================
+function attack(r,c){
 
     if(gameOver) return;
 
-    const cell = enemyBoard[r][c];
-
-    if(cell === 2 || cell === 3){
-        setMessage("Hai già colpito questa casella!");
+    if(board[r][c] === 2 || board[r][c] === 3){
+        setMsg("Già colpito!");
         return;
     }
 
-    if(cell === 1){
+    if(board[r][c] === 1){
 
-        enemyBoard[r][c] = 2;
-        enemyShips--;
+        board[r][c] = 2;
+        shipsLeft--;
 
-        lowerMusicVolume();
+        lowerMusic();
 
-        hitSound.currentTime = 0;
-        hitSound.play().catch(()=>{});
+        hit.currentTime = 0;
+        hit.play().catch(()=>{});
 
-        setMessage("💥 Nave colpita!");
+        setMsg("💥 Colpito!");
 
-        if(enemyShips === 0){
-            backgroundMusic.pause();
-            setMessage("🏆 Hai distrutto tutte le navi!");
+        if(shipsLeft === 0){
             gameOver = true;
+            music.pause();
+            setMsg("🏆 Hai vinto!");
         }
 
     } else {
 
-        enemyBoard[r][c] = 3;
+        board[r][c] = 3;
 
-        lowerMusicVolume();
+        lowerMusic();
 
-        waterSound.currentTime = 0;
-        waterSound.play().catch(()=>{});
+        water.currentTime = 0;
+        water.play().catch(()=>{});
 
-        setMessage("🌊 Acqua!");
+        setMsg("🌊 Acqua!");
     }
 
-    renderBoard();
+    render();
 }
 
-function setMessage(text){
-    document.getElementById("message").innerText = text;
+// ======================
+// MSG
+// ======================
+function setMsg(t){
+    document.getElementById("message").innerText = t;
 }
 
-function restartGame(){
+// ======================
+// START GAME (IMPORTANTE)
+// ======================
+function startGame(){
 
-    enemyBoard = createBoard();
-    enemyShips = 0;
+    board = createBoard();
+    shipsLeft = 0;
     gameOver = false;
 
-    placeShips(enemyBoard);
-    renderBoard();
+    placeShips();
+    render();
 
-    setMessage("Nuova partita iniziata!");
+    setMsg("Partita iniziata!");
 
-    backgroundMusic.pause();
-    backgroundMusic.currentTime = 0;
-    backgroundMusic.play().catch(()=>{});
+    startMusic(); // 🔥 MUSICA DOPO CLICK (NO BLOCCO)
 }
 
-restartGame();
+startGame();
 
 </script>
 
