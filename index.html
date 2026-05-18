@@ -160,6 +160,25 @@
     backgroundMusic.volume = 0.5;
 
     // ======================================
+    // ABBASSA VOLUME MUSICA TEMPORANEAMENTE
+    // ======================================
+
+    function lowerMusicVolume(){
+
+        // Abbassa il volume
+        backgroundMusic.volume = 0.15;
+
+        // Dopo 1 secondo torna normale
+        setTimeout(() => {
+
+            if(!gameOver){
+                backgroundMusic.volume = 0.5;
+            }
+
+        }, 1000);
+    }
+
+    // ======================================
     // CREA TABELLONE
     // ======================================
 
@@ -295,6 +314,9 @@
 
             enemyShips--;
 
+            // Abbassa temporaneamente la musica
+            lowerMusicVolume();
+
             // Riproduce suono colpo nave
             hitSound.currentTime = 0;
 
@@ -324,6 +346,9 @@
         else{
 
             enemyBoard[r][c] = 3;
+
+            // Abbassa temporaneamente la musica
+            lowerMusicVolume();
 
             // Riproduce suono acqua
             waterSound.currentTime = 0;
