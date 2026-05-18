@@ -8,60 +8,60 @@
 
 <style>
 
-    *{
-        box-sizing:border-box;
-        font-family:Arial, sans-serif;
-    }
+*{
+    box-sizing:border-box;
+    font-family:Arial, sans-serif;
+}
 
-    body{
-        margin:0;
-        background:#0f172a;
-        color:white;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        min-height:100vh;
-        padding:20px;
-    }
+body{
+    margin:0;
+    background:#0f172a;
+    color:white;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+}
 
-    h1{ margin-bottom:10px; }
-    p{ margin-top:0; }
+h1{ margin-bottom:10px; }
+p{ margin-top:0; }
 
-    .board{
-        display:grid;
-        grid-template-columns:repeat(10, 40px);
-        grid-template-rows:repeat(10, 40px);
-        gap:2px;
-        background:#1e293b;
-        padding:5px;
-        border-radius:10px;
-    }
+.board{
+    display:grid;
+    grid-template-columns:repeat(10, 40px);
+    grid-template-rows:repeat(10, 40px);
+    gap:2px;
+    background:#1e293b;
+    padding:5px;
+    border-radius:10px;
+}
 
-    .cell{
-        width:40px;
-        height:40px;
-        background:#334155;
-        border-radius:4px;
-        cursor:pointer;
-    }
+.cell{
+    width:40px;
+    height:40px;
+    background:#334155;
+    border-radius:4px;
+    cursor:pointer;
+}
 
-    .hit{ background:#ef4444 !important; }
-    .miss{ background:#38bdf8 !important; }
+.hit{ background:#ef4444 !important; }
+.miss{ background:#38bdf8 !important; }
 
-    button{
-        margin-top:20px;
-        padding:10px 20px;
-        border:none;
-        border-radius:8px;
-        background:#22c55e;
-        color:white;
-        font-size:16px;
-        cursor:pointer;
-    }
+button{
+    margin-top:20px;
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    background:#22c55e;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+}
 
-    button:hover{
-        background:#16a34a;
-    }
+button:hover{
+    background:#16a34a;
+}
 
 </style>
 </head>
@@ -93,12 +93,17 @@ let gameOver = false;
 // AUDIO 🎵
 // ======================
 
-// MUSICA DI SOTTOFONDO
+// musica principale
 const music = new Audio("./assets/musicasottofondo.wav");
 music.loop = true;
 music.volume = 0.5;
 
-// SUONI EFFETTO
+// seconda musica (più bassa, atmosfera)
+const music2 = new Audio("https://raw.githubusercontent.com/carlotta024/battaglia-navale/main/assets/musicasottofondo.wav");
+music2.loop = true;
+music2.volume = 0.15;
+
+// effetti
 const hit = new Audio("./assets/colpirebarca.wav");
 const water = new Audio("./assets/inacqua.wav");
 
@@ -108,25 +113,32 @@ water.volume = 1.0;
 let musicStarted = false;
 
 // ======================
-// MUSICA (START SICURO)
+// START MUSIC
 // ======================
 function startMusic(){
     if(!musicStarted){
-        music.play()
-            .then(() => musicStarted = true)
-            .catch(err => console.log("Musica bloccata:", err));
+        music.play().catch(()=>{});
+        music2.play().catch(()=>{});
+        musicStarted = true;
     }
 }
 
-// abbassa volume temporaneo
-function lowerMusic(){
+// ======================
+// CROSSFADE DINAMICO
+// ======================
+function crossfadeOnHit(){
+    // abbassa principale
     music.volume = 0.2;
+
+    // alza leggermente la seconda
+    music2.volume = 0.35;
 
     setTimeout(() => {
         if(!gameOver){
             music.volume = 0.5;
+            music2.volume = 0.15;
         }
-    }, 800);
+    }, 900);
 }
 
 // ======================
@@ -137,13 +149,10 @@ function createBoard(){
 }
 
 function placeShips(){
-
     SHIPS.forEach(size => {
-
         let placed = false;
 
         while(!placed){
-
             const horizontal = Math.random() < 0.5;
             const r = Math.floor(Math.random() * SIZE);
             const c = Math.floor(Math.random() * SIZE);
@@ -177,7 +186,6 @@ function placeShips(){
 // RENDER
 // ======================
 function render(){
-
     const el = document.getElementById("enemy-board");
     el.innerHTML = "";
 
@@ -209,14 +217,14 @@ function attack(r,c){
         return;
     }
 
-    startMusic(); // assicura musica attiva
+    startMusic();
 
     if(board[r][c] === 1){
 
         board[r][c] = 2;
         shipsLeft--;
 
-        lowerMusic();
+        crossfadeOnHit();
 
         hit.currentTime = 0;
         hit.play().catch(()=>{});
@@ -226,6 +234,7 @@ function attack(r,c){
         if(shipsLeft === 0){
             gameOver = true;
             music.pause();
+            music2.pause();
             setMsg("🏆 Hai vinto!");
         }
 
@@ -233,7 +242,7 @@ function attack(r,c){
 
         board[r][c] = 3;
 
-        lowerMusic();
+        crossfadeOnHit();
 
         water.currentTime = 0;
         water.play().catch(()=>{});
@@ -265,7 +274,7 @@ function startGame(){
 
     setMsg("Partita iniziata!");
 
-    startMusic(); // 🎵 parte dopo click utente
+    startMusic();
 }
 
 startGame();
