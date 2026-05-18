@@ -65,12 +65,10 @@
         background:#475569;
     }
 
-    /* Nave colpita */
     .hit{
         background:#ef4444 !important;
     }
 
-    /* Acqua */
     .miss{
         background:#38bdf8 !important;
     }
@@ -123,289 +121,173 @@
 
 <script>
 
-    // ======================================
-    // CONFIGURAZIONE
-    // ======================================
+const BOARD_SIZE = 10;
+const SHIPS = [5,4,3,3,2];
 
-    const BOARD_SIZE = 10;
+let enemyBoard = [];
+let enemyShips = 0;
+let gameOver = false;
 
-    // Dimensioni delle navi
-    const SHIPS = [5,4,3,3,2];
+// ======================================
+// SUONI (FIX VOLUME)
+// ======================================
 
-    // ======================================
-    // VARIABILI GIOCO
-    // ======================================
+const waterSound = new Audio("assets/inacqua.wav");
+const hitSound = new Audio("assets/colpirebarca.wav");
+const backgroundMusic = new Audio("assets/musicasottofondo.wav");
 
-    let enemyBoard = [];
+// 🔊 VOLUMI MIGLIORATI
+backgroundMusic.loop = true;
+backgroundMusic.volume = 1.0; // MUSICA PIÙ ALTA
 
-    let enemyShips = 0;
+waterSound.volume = 1.0;
+hitSound.volume = 1.0;
 
-    let gameOver = false;
+// 🔊 abbassa leggermente la musica durante gli effetti
+function lowerMusicVolume(){
 
-    // ======================================
-    // SUONI
-    // ======================================
+    backgroundMusic.volume = 0.7;
 
-    // Suono acqua
-    const waterSound = new Audio("assets/inacqua.wav");
+    setTimeout(() => {
+        if(!gameOver){
+            backgroundMusic.volume = 1.0;
+        }
+    }, 1000);
+}
 
-    // Suono colpo nave
-    const hitSound = new Audio("assets/colpirebarca.wav");
+// ======================================
+// RESTO DEL GIOCO (UGUALE AL TUO)
+// ======================================
 
-    // Musica di sottofondo
-    const backgroundMusic = new Audio("assets/musicasottofondo.wav");
+function createBoard(){
+    return Array.from({ length: BOARD_SIZE }, () =>
+        Array(BOARD_SIZE).fill(0)
+    );
+}
 
-    // Impostazioni musica
-    backgroundMusic.loop = true;
-    backgroundMusic.volume = 0.5;
+function placeShips(board){
+    SHIPS.forEach(size => {
+        let placed = false;
 
-    // ======================================
-    // ABBASSA VOLUME MUSICA TEMPORANEAMENTE
-    // ======================================
+        while(!placed){
+            const horizontal = Math.random() < 0.5;
+            const row = Math.floor(Math.random() * BOARD_SIZE);
+            const col = Math.floor(Math.random() * BOARD_SIZE);
 
-    function lowerMusicVolume(){
+            let fits = true;
 
-        // Abbassa il volume
-        backgroundMusic.volume = 0.15;
+            for(let i = 0; i < size; i++){
+                const r = row + (horizontal ? 0 : i);
+                const c = col + (horizontal ? i : 0);
 
-        // Dopo 1 secondo torna normale
-        setTimeout(() => {
-
-            if(!gameOver){
-                backgroundMusic.volume = 0.5;
+                if(
+                    r >= BOARD_SIZE ||
+                    c >= BOARD_SIZE ||
+                    board[r][c] !== 0
+                ){
+                    fits = false;
+                    break;
+                }
             }
 
-        }, 1000);
-    }
-
-    // ======================================
-    // CREA TABELLONE
-    // ======================================
-
-    function createBoard(){
-
-        return Array.from({ length: BOARD_SIZE }, () =>
-            Array(BOARD_SIZE).fill(0)
-        );
-    }
-
-    // ======================================
-    // POSIZIONA NAVI CASUALI
-    // ======================================
-
-    function placeShips(board){
-
-        SHIPS.forEach(size => {
-
-            let placed = false;
-
-            while(!placed){
-
-                const horizontal = Math.random() < 0.5;
-
-                const row = Math.floor(Math.random() * BOARD_SIZE);
-
-                const col = Math.floor(Math.random() * BOARD_SIZE);
-
-                let fits = true;
-
-                // Controllo spazio disponibile
+            if(fits){
                 for(let i = 0; i < size; i++){
-
                     const r = row + (horizontal ? 0 : i);
-
                     const c = col + (horizontal ? i : 0);
-
-                    if(
-                        r >= BOARD_SIZE ||
-                        c >= BOARD_SIZE ||
-                        board[r][c] !== 0
-                    ){
-                        fits = false;
-                        break;
-                    }
+                    board[r][c] = 1;
+                    enemyShips++;
                 }
-
-                // Posizionamento nave
-                if(fits){
-
-                    for(let i = 0; i < size; i++){
-
-                        const r = row + (horizontal ? 0 : i);
-
-                        const c = col + (horizontal ? i : 0);
-
-                        board[r][c] = 1;
-
-                        enemyShips++;
-                    }
-
-                    placed = true;
-                }
+                placed = true;
             }
+        }
+    });
+}
+
+function renderBoard(){
+    const boardElement = document.getElementById("enemy-board");
+    boardElement.innerHTML = "";
+
+    enemyBoard.forEach((row, r) => {
+        row.forEach((cell, c) => {
+
+            const div = document.createElement("div");
+            div.classList.add("cell");
+
+            if(cell === 2) div.classList.add("hit");
+            if(cell === 3) div.classList.add("miss");
+
+            div.addEventListener("click", () => attack(r, c));
+
+            boardElement.appendChild(div);
         });
+    });
+}
+
+function attack(r, c){
+
+    if(gameOver) return;
+
+    const cell = enemyBoard[r][c];
+
+    if(cell === 2 || cell === 3){
+        setMessage("Hai già colpito questa casella!");
+        return;
     }
 
-    // ======================================
-    // DISEGNA TABELLONE
-    // ======================================
+    if(cell === 1){
 
-    function renderBoard(){
+        enemyBoard[r][c] = 2;
+        enemyShips--;
 
-        const boardElement = document.getElementById("enemy-board");
+        lowerMusicVolume();
 
-        boardElement.innerHTML = "";
+        hitSound.currentTime = 0;
+        hitSound.play().catch(()=>{});
 
-        enemyBoard.forEach((row, r) => {
+        setMessage("💥 Nave colpita!");
 
-            row.forEach((cell, c) => {
-
-                const div = document.createElement("div");
-
-                div.classList.add("cell");
-
-                // Nave colpita
-                if(cell === 2){
-                    div.classList.add("hit");
-                }
-
-                // Acqua
-                if(cell === 3){
-                    div.classList.add("miss");
-                }
-
-                // Evento click
-                div.addEventListener("click", () => attack(r, c));
-
-                boardElement.appendChild(div);
-
-            });
-
-        });
-
-    }
-
-    // ======================================
-    // ATTACCO
-    // ======================================
-
-    function attack(r, c){
-
-        // Se partita terminata
-        if(gameOver) return;
-
-        const cell = enemyBoard[r][c];
-
-        // Casella già colpita
-        if(cell === 2 || cell === 3){
-
-            setMessage("Hai già colpito questa casella!");
-
-            return;
+        if(enemyShips === 0){
+            backgroundMusic.pause();
+            setMessage("🏆 Hai distrutto tutte le navi!");
+            gameOver = true;
         }
 
-        // ======================================
-        // NAVE COLPITA
-        // ======================================
+    } else {
 
-        if(cell === 1){
+        enemyBoard[r][c] = 3;
 
-            enemyBoard[r][c] = 2;
+        lowerMusicVolume();
 
-            enemyShips--;
+        waterSound.currentTime = 0;
+        waterSound.play().catch(()=>{});
 
-            // Abbassa temporaneamente la musica
-            lowerMusicVolume();
-
-            // Riproduce suono colpo nave
-            hitSound.currentTime = 0;
-
-            hitSound.play().catch(error => {
-                console.log("Errore audio hit:", error);
-            });
-
-            setMessage("💥 Nave colpita!");
-
-            // Vittoria
-            if(enemyShips === 0){
-
-                // Ferma musica
-                backgroundMusic.pause();
-
-                setMessage("🏆 Hai distrutto tutte le navi!");
-
-                gameOver = true;
-            }
-
-        }
-
-        // ======================================
-        // ACQUA
-        // ======================================
-
-        else{
-
-            enemyBoard[r][c] = 3;
-
-            // Abbassa temporaneamente la musica
-            lowerMusicVolume();
-
-            // Riproduce suono acqua
-            waterSound.currentTime = 0;
-
-            waterSound.play().catch(error => {
-                console.log("Errore audio acqua:", error);
-            });
-
-            setMessage("🌊 Acqua!");
-
-        }
-
-        renderBoard();
+        setMessage("🌊 Acqua!");
     }
 
-    // ======================================
-    // MESSAGGI
-    // ======================================
+    renderBoard();
+}
 
-    function setMessage(text){
+function setMessage(text){
+    document.getElementById("message").innerText = text;
+}
 
-        document.getElementById("message").innerText = text;
-    }
+function restartGame(){
 
-    // ======================================
-    // NUOVA PARTITA
-    // ======================================
+    enemyBoard = createBoard();
+    enemyShips = 0;
+    gameOver = false;
 
-    function restartGame(){
+    placeShips(enemyBoard);
+    renderBoard();
 
-        enemyBoard = createBoard();
+    setMessage("Nuova partita iniziata!");
 
-        enemyShips = 0;
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0;
+    backgroundMusic.play().catch(()=>{});
+}
 
-        gameOver = false;
-
-        placeShips(enemyBoard);
-
-        renderBoard();
-
-        setMessage("Nuova partita iniziata!");
-
-        // Riavvia musica
-        backgroundMusic.pause();
-
-        backgroundMusic.currentTime = 0;
-
-        backgroundMusic.play().catch(error => {
-            console.log("Errore musica:", error);
-        });
-    }
-
-    // ======================================
-    // AVVIO GIOCO
-    // ======================================
-
-    restartGame();
+restartGame();
 
 </script>
 
