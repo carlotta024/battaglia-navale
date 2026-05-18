@@ -90,17 +90,17 @@ let shipsLeft = 0;
 let gameOver = false;
 
 // ======================
-// AUDIO (FIX DEFINITIVO)
+// AUDIO 🎵
 // ======================
 
-// IMPORTANTISSIMO: solo dopo click utente
-const music = new Audio("assets/musicasottofondo.wav");
-const hit = new Audio("assets/colpirebarca.wav");
-const water = new Audio("assets/inacqua.wav");
-
-// volume alto
-music.volume = 1.0;
+// MUSICA DI SOTTOFONDO
+const music = new Audio("./assets/musicasottofondo.wav");
 music.loop = true;
+music.volume = 0.5;
+
+// SUONI EFFETTO
+const hit = new Audio("./assets/colpirebarca.wav");
+const water = new Audio("./assets/inacqua.wav");
 
 hit.volume = 1.0;
 water.volume = 1.0;
@@ -108,28 +108,23 @@ water.volume = 1.0;
 let musicStarted = false;
 
 // ======================
-// AVVIO MUSICA (NO BLOCCO)
+// MUSICA (START SICURO)
 // ======================
 function startMusic(){
     if(!musicStarted){
-        music.play().then(() => {
-            musicStarted = true;
-        }).catch(err => {
-            console.log("Musica bloccata:", err);
-        });
+        music.play()
+            .then(() => musicStarted = true)
+            .catch(err => console.log("Musica bloccata:", err));
     }
 }
 
-// ======================
-// LEGGERO ABBASSAMENTO
-// ======================
+// abbassa volume temporaneo
 function lowerMusic(){
-
-    music.volume = 0.6;
+    music.volume = 0.2;
 
     setTimeout(() => {
         if(!gameOver){
-            music.volume = 1.0;
+            music.volume = 0.5;
         }
     }, 800);
 }
@@ -214,6 +209,8 @@ function attack(r,c){
         return;
     }
 
+    startMusic(); // assicura musica attiva
+
     if(board[r][c] === 1){
 
         board[r][c] = 2;
@@ -255,7 +252,7 @@ function setMsg(t){
 }
 
 // ======================
-// START GAME (IMPORTANTE)
+// START GAME
 // ======================
 function startGame(){
 
@@ -268,7 +265,7 @@ function startGame(){
 
     setMsg("Partita iniziata!");
 
-    startMusic(); // 🔥 MUSICA DOPO CLICK (NO BLOCCO)
+    startMusic(); // 🎵 parte dopo click utente
 }
 
 startGame();
