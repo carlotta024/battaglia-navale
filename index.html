@@ -1,369 +1,123 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+// ============================================================================
+// 1. GESTORE AUDIO (Caricamento e Controllo dei Suoni)
+// ============================================================================
+const AudioManager = {
+    // Caricamento dei file audio dalle cartelle degli asset
+    bgMusic: new Audio('assets/music game.mp3'),
+    soundDie: new Audio('assets/game die.mp3'),
+    soundRetry: new Audio('assets/retry botton.flac'),
+    soundEat: new Audio('assets/eat.wav'),
+    soundBip: new Audio('assets/bip.wav'),
 
-<title>Battaglia Navale</title>
+    init: function() {
+        // Configura la musica di sottofondo in loop continuo
+        this.bgMusic.loop = true;
+        this.bgMusic.volume = 0.4; // Volume leggermente più basso per non coprire gli effetti
+    },
 
-<style>
-
-    *{
-        box-sizing:border-box;
-        font-family:Arial, sans-serif;
-    }
-
-    body{
-        margin:0;
-        background:#0f172a;
-        color:white;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        min-height:100vh;
-        padding:20px;
-    }
-
-    h1{
-        margin-bottom:10px;
-    }
-
-    p{
-        margin-top:0;
-    }
-
-    .game-container{
-        display:flex;
-        justify-content:center;
-        margin-top:20px;
-    }
-
-    .board-wrapper{
-        text-align:center;
-    }
-
-    .board{
-        display:grid;
-        grid-template-columns:repeat(10, 40px);
-        grid-template-rows:repeat(10, 40px);
-        gap:2px;
-        background:#1e293b;
-        padding:5px;
-        border-radius:10px;
-    }
-
-    .cell{
-        width:40px;
-        height:40px;
-        background:#334155;
-        border-radius:4px;
-        cursor:pointer;
-        transition:0.2s;
-    }
-
-    .cell:hover{
-        background:#475569;
-    }
-
-    /* Nave colpita */
-    .hit{
-        background:#ef4444 !important;
-    }
-
-    /* Acqua */
-    .miss{
-        background:#38bdf8 !important;
-    }
-
-    #message{
-        margin-top:20px;
-        font-size:20px;
-        font-weight:bold;
-    }
-
-    button{
-        margin-top:20px;
-        padding:10px 20px;
-        border:none;
-        border-radius:8px;
-        background:#22c55e;
-        color:white;
-        font-size:16px;
-        cursor:pointer;
-    }
-
-    button:hover{
-        background:#16a34a;
-    }
-
-</style>
-</head>
-
-<body>
-
-<h1>⚓ Battaglia Navale</h1>
-
-<p>Trova e distruggi tutte le navi nemiche!</p>
-
-<div class="game-container">
-
-    <div class="board-wrapper">
-
-        <h2>Campo Nemico</h2>
-
-        <div id="enemy-board" class="board"></div>
-
-    </div>
-
-</div>
-
-<div id="message">Inizia la partita!</div>
-
-<button onclick="restartGame()">Nuova Partita</button>
-
-<script>
-
-    // ======================================
-    // CONFIGURAZIONE
-    // ======================================
-
-    const BOARD_SIZE = 10;
-
-    // Dimensioni delle navi
-    const SHIPS = [5,4,3,3,2];
-
-    // ======================================
-    // VARIABILI GIOCO
-    // ======================================
-
-    let enemyBoard = [];
-
-    let enemyShips = 0;
-
-    let gameOver = false;
-
-    // ======================================
-    // SUONI
-    // ======================================
-
-    // Suono acqua
-    const waterSound = new Audio("assets/inacqua.wav");
-
-    // Suono colpo nave
-    const hitSound = new Audio("assets/colpirebarca.wav");
-
-    // ======================================
-    // CREA TABELLONE
-    // ======================================
-
-    function createBoard(){
-
-        return Array.from({ length: BOARD_SIZE }, () =>
-            Array(BOARD_SIZE).fill(0)
-        );
-    }
-
-    // ======================================
-    // POSIZIONA NAVI CASUALI
-    // ======================================
-
-    function placeShips(board){
-
-        SHIPS.forEach(size => {
-
-            let placed = false;
-
-            while(!placed){
-
-                const horizontal = Math.random() < 0.5;
-
-                const row = Math.floor(Math.random() * BOARD_SIZE);
-
-                const col = Math.floor(Math.random() * BOARD_SIZE);
-
-                let fits = true;
-
-                // Controllo spazio disponibile
-                for(let i = 0; i < size; i++){
-
-                    const r = row + (horizontal ? 0 : i);
-
-                    const c = col + (horizontal ? i : 0);
-
-                    if(
-                        r >= BOARD_SIZE ||
-                        c >= BOARD_SIZE ||
-                        board[r][c] !== 0
-                    ){
-                        fits = false;
-                        break;
-                    }
-                }
-
-                // Posizionamento nave
-                if(fits){
-
-                    for(let i = 0; i < size; i++){
-
-                        const r = row + (horizontal ? 0 : i);
-
-                        const c = col + (horizontal ? i : 0);
-
-                        board[r][c] = 1;
-
-                        enemyShips++;
-                    }
-
-                    placed = true;
-                }
-            }
+    playMusic: function() {
+        // I browser moderni bloccano l'audio automatico senza un click dell'utente
+        this.bgMusic.play().catch(e => {
+            console.log("Audio bloccato: in attesa che l'utente interagisca con il gioco.");
         });
+    },
+
+    stopMusic: function() {
+        this.bgMusic.pause();
+        this.bgMusic.currentTime = 0; // Resetta la traccia dall'inizio
+    },
+
+    playSFX: function(audioClip) {
+        // Resetta il tempo a 0 permette di riprodurre il suono a ripetizione rapida
+        audioClip.currentTime = 0; 
+        audioClip.play().catch(e => console.log("Errore riproduzione SFX:", e));
+    }
+};
+
+// Inizializzazione immediata del gestore audio
+AudioManager.init();
+
+
+// ============================================================================
+// 2. LOGICA DI GIOCO E INTEGRAZIONE DEI SUONI
+// ============================================================================
+
+// Funzione che fa partire o ripartire la partita
+function avviaPartita() {
+    console.log("Partita avviata!");
+    // [Logica di reset del gioco: vite, punteggio, posizioni...]
+    
+    // Riproduce la musica normalmente nel gioco
+    AudioManager.playMusic(); 
+}
+
+// Gestione degli input per il movimento del personaggio
+window.addEventListener('keydown', (event) => {
+    // Sostituisci queste condizioni con i controlli effettivi del tuo gioco
+    const tastiValidi = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'];
+    
+    if (tastiValidi.includes(event.key)) {
+        // [Logica per cambiare la direzione del personaggio...]
+        console.log("Cambio direzione: " + event.key);
+        
+        // Bip quando cambia direzione per muoversi
+        AudioManager.playSFX(AudioManager.soundBip);
+    }
+});
+
+// Funzione da inserire nel loop di aggiornamento del gioco (update loop)
+function controllaCollisioni(personaggio, pallino, nemico) {
+    
+    // COSA SUCCEDE QUANDO MANGIA
+    if (controllaContatto(personaggio, pallino)) {
+        // [Logica per rimuovere il pallino e aggiungere punteggio...]
+        console.log("Pallino mangiato!");
+        
+        // Eat quando mangia i pallini
+        AudioManager.playSFX(AudioManager.soundEat);
     }
 
-    // ======================================
-    // DISEGNA TABELLONE
-    // ======================================
-
-    function renderBoard(){
-
-        const boardElement = document.getElementById("enemy-board");
-
-        boardElement.innerHTML = "";
-
-        enemyBoard.forEach((row, r) => {
-
-            row.forEach((cell, c) => {
-
-                const div = document.createElement("div");
-
-                div.classList.add("cell");
-
-                // Nave colpita
-                if(cell === 2){
-                    div.classList.add("hit");
-                }
-
-                // Acqua
-                if(cell === 3){
-                    div.classList.add("miss");
-                }
-
-                // Evento click
-                div.addEventListener("click", () => attack(r, c));
-
-                boardElement.appendChild(div);
-
-            });
-
-        });
-
+    // COSA SUCCEDE QUANDO MUORE
+    if (controllaContatto(personaggio, nemico)) {
+        console.log("Il giocatore è stato colpito!");
+        giocatoreMorto();
     }
+}
 
-    // ======================================
-    // ATTACCO
-    // ======================================
+// Gestione della sconfitta del giocatore
+function giocatoreMorto() {
+    // Ferma la musica di sottofondo per dare impatto alla morte
+    AudioManager.stopMusic(); 
+    
+    // Game die quando muore
+    AudioManager.playSFX(AudioManager.soundDie);
+    
+    // [Logica per bloccare i movimenti, animazioni di morte...]
+    
+    // Passa alla schermata di Game Over (ad esempio dopo un piccolo delay)
+    setTimeout(mostraSchermataGameOver, 800); 
+}
 
-    function attack(r, c){
+// Schermata di Game Over e scritte a schermo
+function mostraSchermataGameOver() {
+    // [Logica per rendere visibile l'interfaccia di Game Over]
+    console.log("Schermata visualizzata: CATTURATO");
+    
+    // Retry botton quando esce la scritta "catturato"
+    AudioManager.playSFX(AudioManager.soundRetry);
+}
 
-        // Se partita terminata
-        if(gameOver) return;
 
-        const cell = enemyBoard[r][c];
+// ============================================================================
+// 3. FUNZIONI DI SUPPORTO (Esempi fittizi per far girare la logica)
+// ============================================================================
+function controllaContatto(oggettoA, oggettoB) {
+    // Qui andrà la tua formula di collisione (es. hitbox rettangolari o distanze)
+    return false; 
+}
 
-        // Casella già colpita
-        if(cell === 2 || cell === 3){
-
-            setMessage("Hai già colpito questa casella!");
-
-            return;
-        }
-
-        // ======================================
-        // NAVE COLPITA
-        // ======================================
-
-        if(cell === 1){
-
-            enemyBoard[r][c] = 2;
-
-            enemyShips--;
-
-            // Riproduce suono colpo nave
-            hitSound.currentTime = 0;
-
-            hitSound.play().catch(error => {
-                console.log("Errore audio hit:", error);
-            });
-
-            setMessage("💥 Nave colpita!");
-
-            // Vittoria
-            if(enemyShips === 0){
-
-                setMessage("🏆 Hai distrutto tutte le navi!");
-
-                gameOver = true;
-            }
-
-        }
-
-        // ======================================
-        // ACQUA
-        // ======================================
-
-        else{
-
-            enemyBoard[r][c] = 3;
-
-            // Riproduce suono acqua
-            waterSound.currentTime = 0;
-
-            waterSound.play().catch(error => {
-                console.log("Errore audio acqua:", error);
-            });
-
-            setMessage("🌊 Acqua!");
-
-        }
-
-        renderBoard();
-    }
-
-    // ======================================
-    // MESSAGGI
-    // ======================================
-
-    function setMessage(text){
-
-        document.getElementById("message").innerText = text;
-    }
-
-    // ======================================
-    // NUOVA PARTITA
-    // ======================================
-
-    function restartGame(){
-
-        enemyBoard = createBoard();
-
-        enemyShips = 0;
-
-        gameOver = false;
-
-        placeShips(enemyBoard);
-
-        renderBoard();
-
-        setMessage("Nuova partita iniziata!");
-    }
-
-    // ======================================
-    // AVVIO GIOCO
-    // ======================================
-
-    restartGame();
-
-</script>
-
-</body>
-</html>
+// Esempio di attivazione iniziale tramite un click sulla pagina (richiesto dai browser)
+window.addEventListener('click', () => {
+    // Se il gioco non è ancora iniziato, lo avvia al primo click dell'utente
+    // avviaPartita(); 
+}, { once: true }); // Si attiva solo una volta
