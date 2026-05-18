@@ -98,7 +98,7 @@ const music = new Audio("./assets/musicasottofondo.wav");
 music.loop = true;
 music.volume = 0.1;
 
-// seconda musica (più bassa, atmosfera)
+// seconda musica
 const music2 = new Audio("https://raw.githubusercontent.com/carlotta024/battaglia-navale/main/assets/musicasottofondo.wav");
 music2.loop = true;
 music2.volume = 0.15;
@@ -106,6 +106,10 @@ music2.volume = 0.15;
 // effetti
 const hit = new Audio("./assets/colpirebarca.wav");
 const water = new Audio("./assets/inacqua.wav");
+
+// 🏆 suono finale vittoria (AGGIUNTO)
+const winSound = new Audio("https://raw.githubusercontent.com/carlotta024/battaglia-navale/main/assets/sunofinalewav.wav");
+winSound.volume = 1.0;
 
 hit.volume = 1.0;
 water.volume = 1.0;
@@ -124,13 +128,10 @@ function startMusic(){
 }
 
 // ======================
-// CROSSFADE DINAMICO
+// CROSSFADE
 // ======================
 function crossfadeOnHit(){
-    // abbassa principale
     music.volume = 0.2;
-
-    // alza leggermente la seconda
     music2.volume = 0.35;
 
     setTimeout(() => {
@@ -233,8 +234,13 @@ function attack(r,c){
 
         if(shipsLeft === 0){
             gameOver = true;
+
             music.pause();
             music2.pause();
+
+            winSound.currentTime = 0;
+            winSound.play().catch(()=>{});
+
             setMsg("🏆 Hai vinto!");
         }
 
